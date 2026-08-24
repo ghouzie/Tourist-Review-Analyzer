@@ -1,43 +1,19 @@
-"""
-Tourist Review Sentiment — ultra-light Streamlit demo (single model).
-
-Just sentiment analysis, sized to run comfortably on Streamlit Community Cloud's
-free tier (1GB RAM). For the full app (sentiment + topic + summary), see app.py
-and run it locally.
-
-Run with: streamlit run app_light.py
-"""
-
 import streamlit as st
-from transformers import pipeline
+from transformers import AutoModelForSequenceClassification, XLMRobertaTokenizer, pipeline
 
-st.set_page_config(page_title="Tourist Review Sentiment", page_icon="📝")
-
+st.title("Review Sentiment")
 
 @st.cache_resource
-def load_model():
-    return pipeline(
-        "sentiment-analysis",
-        model="distilbert-base-uncased-finetuned-sst-2-english",
-    )
+def load():
+    model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+    tokenizer = XLMRobertaTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    return pipeline("text-classification", model=model, tokenizer=tokenizer)
 
+sentiment_model = load()
 
-sentiment_model = load_model()
+review = st.text_area("Paste a review")
 
-st.title("📝 Tourist Review Sentiment")
-st.caption("Bahrain restaurant & hotel reviews — pretrained Hugging Face model, no training required.")
-
-review = st.text_area("Paste a review:", height=150)
-
-if st.button("Analyze") and review.strip():
-    result = sentiment_model(review)[0]
-    output = {
-        "label": result["label"],
-        "score": result["score"],
-        "metadata": "huggingface_AI_model",
-    }
-
-    st.metric("Sentiment", output["label"], f"{output['score']:.0%} confidence")
-
-    with st.expander("Raw model output"):
-        st.json(output)
+if st.button("Analyze") and review:
+    s = sentiment_model(review)[0]
+    st.write("Sentiment:", s["label"], f"({s['score']:.0%})")
